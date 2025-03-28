@@ -1,14 +1,19 @@
-import subprocess
 import sys
 import os
+import subprocess
 import glob
 
-INPUT_VIDEO = "uploads/input_video.mp4"
-TEMP_AUDIO = "uploads/temp_audio.wav"
-CLEANED_AUDIO = "uploads/cleaned_audio.wav"
-FINAL_OUTPUT = "outputs/output_video.mp4"
-
+# Default values
 volume = sys.argv[1] if len(sys.argv) > 1 else "2.0"
+noise_duration = sys.argv[2] if len(sys.argv) > 2 else "5"
+input_file = sys.argv[3] if len(sys.argv) > 3 else "input_video.mp4"
+output_file = sys.argv[4] if len(sys.argv) > 4 else "output_video.mp4"
+
+INPUT_VIDEO = os.path.join("uploads", input_file)
+TEMP_AUDIO = os.path.join("uploads", "temp_audio.wav")
+CLEANED_AUDIO = os.path.join("uploads", "cleaned_audio.wav")
+FINAL_OUTPUT = os.path.join("outputs", output_file)
+
 
 try:
     print("Extracting audio from video...")
