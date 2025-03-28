@@ -1,1 +1,40 @@
-node_modules
+# -------------------------
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+*.egg-info/
+*.log
+
+# Virtual Environments
+venv/
+
+# -------------------------
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+
+# -------------------------
+# VSCode
+.vscode/
+.history/
+
+# -------------------------
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# -------------------------
+# Output & Upload Folders
+uploads/
+uploads/.gitkeep  # optional: to keep the folder structure
+outputs/
+outputs/.gitkeep  # optional: to keep the folder structure
+
+# -------------------------
+# DeepFilterNet's venv if mistakenly added
+DeepFilterNet/venv/
