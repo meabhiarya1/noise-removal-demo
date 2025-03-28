@@ -7,6 +7,15 @@ const fs = require("fs");
 const app = express();
 const PORT = 5000;
 
+// Ensure uploads and outputs directories exist
+const ensureDirectories = ["uploads", "outputs"];
+ensureDirectories.forEach((dir) => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir);
+    console.log(`📁 Created folder: ${dir}/`);
+  }
+});
+
 // Middleware to parse form data
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
