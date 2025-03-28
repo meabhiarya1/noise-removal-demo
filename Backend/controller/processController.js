@@ -1,9 +1,7 @@
-// --------------------------
-// controllers/processController.js
-// --------------------------
 const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
+const { v4: uuidv4 } = require("uuid");
 
 exports.handleProcess = (req, res) => {
   if (!req.file) {
@@ -12,17 +10,24 @@ exports.handleProcess = (req, res) => {
 
   const volume = req.body.volume || "5.0";
   const noiseDuration = req.body.noise || "5";
-  const inputFileName = req.file.originalname;
-  const baseName = path.parse(inputFileName).name;
-  const cleanedOutputName = `${baseName}_cleaned.mp4`;
-  const outputPath = path.join(__dirname, "../outputs", cleanedOutputName);
-  const uploadedPath = path.join(__dirname, "../uploads", inputFileName);
+  const jobId = uuidv4();
 
-  console.log(`▶️ Starting processing for "${inputFileName}"`);
+  const originalName = req.file.originalname;
+  const inputFileName = `${jobId}_${originalName}`;
+  const cleanedOutputName = `${jobId}_${path.parse(originalName).name}_cleaned.mp4`;
+
+  const uploadedPath = path.join(__dirname, "../uploads", inputFileName);
+  const outputPath = path.join(__dirname, "../outputs", cleanedOutputName);
+
+  // Rename the uploaded file to ensure uniqueness
+  fs.renameSync(path.join(__dirname, "../uploads", originalName), uploadedPath);
+
+  console.log(`▶️ Processing job: ${jobId}`);
+  console.log(`📂 Input File: ${inputFileName}`);
   console.log(`🔊 Volume: ${volume} | 🕒 Noise Duration: ${noiseDuration}`);
   console.log(`📤 Output: ${cleanedOutputName}`);
 
-  const py = spawn("venv/bin/python", [
+  const py = spawn("python", [
     "noise_cleaner.py",
     volume,
     noiseDuration,
@@ -48,16 +53,16 @@ exports.handleProcess = (req, res) => {
     });
 
     if (code === 0) {
-      console.log("✅ Python script finished successfully. Sending file...");
+      console.log("✅ Python script finished. Sending response...");
       res.download(outputPath, cleanedOutputName, (err) => {
         if (err) {
           console.error("❌ Error sending file:", err.message);
-          res.status(500).send("Error sending the cleaned video.");
+          res.status(500).send("Error sending cleaned video.");
         }
       });
     } else {
       console.error("❌ Python script failed with code:", code);
-      res.status(500).send("Audio cleaning process failed.");
+      res.status(500).send("Audio cleaning failed.");
     }
   });
 };
