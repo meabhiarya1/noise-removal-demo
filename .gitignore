@@ -30,10 +30,11 @@ Thumbs.db
 
 # -------------------------
 # Output & Upload Folders
-uploads/
-uploads/.gitkeep  # optional: to keep the folder structure
-outputs/
-outputs/.gitkeep  # optional: to keep the folder structure
+uploads/*
+!uploads/.gitkeep
+
+outputs/*
+!outputs/.gitkeep
 
 # -------------------------
 # DeepFilterNet's venv if mistakenly added
