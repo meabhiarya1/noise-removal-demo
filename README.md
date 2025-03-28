@@ -1,13 +1,16 @@
-# 1. Create and activate virtual environment
+# 1. Start Ubuntu with wsl 
+wsl -d Ubuntu 
+
+# 2. Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
 
-# 2. Install Python deps
+# 3. Install Python deps
 pip install -r requirements.txt
 pip install -r DeepFilterNet/requirements.txt
 
-# 3. Install Node deps
+# 4. Install Node deps
 npm install
 
-# 4. Run the server
+# 5. Run the server
 node server.js or npm start
