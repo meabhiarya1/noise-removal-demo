@@ -2,8 +2,8 @@ import sys
 import os
 import subprocess
 import glob
+import traceback
 
-# Default values
 volume = sys.argv[1] if len(sys.argv) > 1 else "2.0"
 noise_duration = sys.argv[2] if len(sys.argv) > 2 else "5"
 input_file = sys.argv[3] if len(sys.argv) > 3 else "input_video.mp4"
@@ -13,7 +13,6 @@ INPUT_VIDEO = os.path.join("uploads", input_file)
 TEMP_AUDIO = os.path.join("uploads", "temp_audio.wav")
 CLEANED_AUDIO = os.path.join("uploads", "cleaned_audio.wav")
 FINAL_OUTPUT = os.path.join("outputs", output_file)
-
 
 try:
     print("Extracting audio from video...")
@@ -29,12 +28,12 @@ try:
         "--output-dir", "uploads"
     ], check=True)
 
-    # Find DeepFilterNet output
+    print("Finding DeepFilterNet enhanced output...")
     pattern = TEMP_AUDIO.replace(".wav", "") + "_*.wav"
     matches = glob.glob(os.path.join("uploads", os.path.basename(pattern)))
     if not matches:
         raise FileNotFoundError("DeepFilterNet output not found.")
-    
+
     os.rename(matches[0], CLEANED_AUDIO)
 
     print("Merging cleaned audio back with video...")
@@ -52,8 +51,16 @@ try:
 
     print("✅ Processing complete! Output saved to:", FINAL_OUTPUT)
 
+except subprocess.CalledProcessError as cpe:
+    print("❌ Subprocess failed!")
+    print("Command:", cpe.cmd)
+    print("Return Code:", cpe.returncode)
+    print("Output:", cpe.output if hasattr(cpe, 'output') else "No output")
+    sys.exit(1)
+
 except Exception as e:
-    print("❌ Error:", e)
+    print("❌ Unexpected error:", e)
+    traceback.print_exc()
     sys.exit(1)
 
 finally:

@@ -7,52 +7,78 @@ const fs = require("fs");
 const app = express();
 const PORT = 5000;
 
+// Middleware to parse form data
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// Uploads setup
+// Uploads folder setup
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
-    cb(null, file.originalname); // use original filename
+    cb(null, file.originalname); // keep original name
   },
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("video/")) {
+      return cb(new Error("Only video files are allowed!"));
+    }
+    cb(null, true);
+  },
+});
 
+// Endpoint to handle video upload and processing
 app.post("/process", upload.single("video"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).send("No video file uploaded.");
+  }
+
   const volume = req.body.volume || "5.0";
   const noiseDuration = req.body.noise || "5";
+
   const inputFileName = req.file.originalname;
   const baseName = path.parse(inputFileName).name;
   const cleanedOutputName = `${baseName}_cleaned.mp4`;
   const outputPath = path.join(__dirname, "outputs", cleanedOutputName);
 
-  console.log(`▶️ Starting process with volume=${volume}, noiseDuration=${noiseDuration}`);
+  console.log(`▶️ Starting processing for "${inputFileName}"`);
+  console.log(`🔊 Volume: ${volume} | 🕒 Noise Duration: ${noiseDuration}`);
+  console.log(`📤 Output: ${cleanedOutputName}`);
 
   const py = spawn("venv/bin/python", [
     "noise_cleaner.py",
     volume,
     noiseDuration,
-    inputFileName,           // pass input file name
-    cleanedOutputName        // pass output file name
+    inputFileName,
+    cleanedOutputName,
   ]);
 
   py.stdout.on("data", (data) => {
-    console.log(`stdout: ${data}`);
+    process.stdout.write(`📦 Python: ${data}`);
   });
 
   py.stderr.on("data", (data) => {
-    console.error(`stderr: ${data}`);
+    process.stderr.write(`⚠️ Python Error: ${data}`);
   });
 
   py.on("close", (code) => {
     if (code === 0) {
-      res.download(outputPath);
+      console.log("✅ Python script finished successfully. Sending file...");
+      res.download(outputPath, cleanedOutputName, (err) => {
+        if (err) {
+          console.error("❌ Error sending file:", err.message);
+          res.status(500).send("Error sending the cleaned video.");
+        }
+      });
     } else {
-      res.status(500).send("Processing failed.");
+      console.error("❌ Python script failed with code:", code);
+      res.status(500).send("Audio cleaning process failed.");
     }
   });
 });
 
+// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
