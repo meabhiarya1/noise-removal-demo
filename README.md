@@ -13,4 +13,4 @@ pip install -r DeepFilterNet/requirements.txt
 npm install
 
 # 5. Run the server
-node server.js or npm start
+npm start

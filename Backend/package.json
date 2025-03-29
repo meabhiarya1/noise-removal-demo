@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon server.js",
+    "redis": "sudo service redis-server start",
+    "server": "nodemon server.js",
+    "worker": "nodemon queue/worker.js",
+    "start": "concurrently \"npm run redis\" \"npm run server\" \"npm run worker\"",
     "dev": "nodemon server.js",
     "lint": "eslint .",
     "clean": "rm -rf uploads/* outputs/*"
