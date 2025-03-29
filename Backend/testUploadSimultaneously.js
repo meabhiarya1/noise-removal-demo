@@ -1,7 +1,7 @@
-const axios = require('axios');
-const FormData = require('form-data');
-const fs = require('fs');
-const path = require('path');
+const axios = require("axios");
+const FormData = require("form-data");
+const fs = require("fs");
+const path = require("path");
 
 const upload = (filePath, volume = "5.0", noise = "5") => {
   const form = new FormData();
@@ -11,29 +11,30 @@ const upload = (filePath, volume = "5.0", noise = "5") => {
 
   return axios.post("http://localhost:5000/process", form, {
     headers: form.getHeaders(),
-    responseType: 'stream',
+    responseType: "stream",
   });
 };
 
 const runTest = async () => {
-  const file1 = path.join(__dirname, "sample1.mp4"); // Put test video files here
-  const file2 = path.join(__dirname, "sample2.mp4");
+  const videosDir = path.join(__dirname, "Sample_videos");
+  const files = fs
+    .readdirSync(videosDir)
+    .filter((file) => file.endsWith(".mp4"))
+    .map((file) => path.join(videosDir, file));
 
   console.log("🚀 Starting simultaneous uploads...");
 
   try {
-    const [res1, res2] = await Promise.all([
-      upload(file1),
-      upload(file2)
-    ]);
+    const responses = await Promise.all(files.map((file) => upload(file)));
 
-    const output1 = fs.createWriteStream("output1.mp4");
-    const output2 = fs.createWriteStream("output2.mp4");
+    // responses.forEach((res, index) => {
+    //   const outputStream = fs.createWriteStream(
+    //     path.join(__dirname, "Sample_output_videos", `output_${index + 1}.mp4`)
+    //   );
+    //   res.data.pipe(outputStream);
+    // });
 
-    res1.data.pipe(output1);
-    res2.data.pipe(output2);
-
-    console.log("✅ Both uploads finished and responses saved.");
+    console.log("✅ All uploads completed and responses saved.");
   } catch (err) {
     console.error("❌ Upload failed:", err.message);
   }

@@ -36,6 +36,8 @@ uploads/*
 outputs/*
 !outputs/.gitkeep
 
+Sample_videos
+
 # -------------------------
 # DeepFilterNet's venv if mistakenly added
 DeepFilterNet/venv/
