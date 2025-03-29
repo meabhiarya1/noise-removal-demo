@@ -17,7 +17,6 @@ const worker = new Worker(
       job.data;
 
     const inputPath = path.join(__dirname, "../uploads", inputFileName);
-    const outputPath = path.join(__dirname, "../outputs", cleanedOutputName);
 
     console.log(`▶️ Worker processing job: ${job.id}`);
     console.log(`📂 Input: ${inputFileName}`);
