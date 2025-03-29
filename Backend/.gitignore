@@ -37,6 +37,7 @@ outputs/*
 !outputs/.gitkeep
 
 Sample_videos
+testUploadSimultaneously.js
 
 # -------------------------
 # DeepFilterNet's venv if mistakenly added

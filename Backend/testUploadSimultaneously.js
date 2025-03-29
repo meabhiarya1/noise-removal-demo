@@ -27,14 +27,13 @@ const runTest = async () => {
   try {
     const responses = await Promise.all(files.map((file) => upload(file)));
 
-    // responses.forEach((res, index) => {
-    //   const outputStream = fs.createWriteStream(
-    //     path.join(__dirname, "Sample_output_videos", `output_${index + 1}.mp4`)
-    //   );
-    //   res.data.pipe(outputStream);
-    // });
+    responses.forEach((_, index) => {
+      const fileName = path.basename(files[index]);
+      console.log(`✅ Processing completed for: ${fileName}`);
+    });
 
-    console.log("✅ All uploads completed and responses saved.");
+    console.log("✅ All uploads completed successfully.");
+
   } catch (err) {
     console.error("❌ Upload failed:", err.message);
   }
