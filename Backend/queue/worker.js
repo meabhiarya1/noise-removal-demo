@@ -1,5 +1,4 @@
 const { Worker } = require("bullmq");
-const IORedis = require("ioredis");
 const path = require("path");
 const { spawn } = require("child_process");
 const fs = require("fs");

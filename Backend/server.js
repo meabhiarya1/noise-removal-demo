@@ -1,6 +1,8 @@
 // --------------------------
-// server.js
+// server.js (with clustering)
 // --------------------------
+const cluster = require("cluster");
+const os = require("os");
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
@@ -12,44 +14,65 @@ const { createBullBoard } = require("@bull-board/api");
 const { ExpressAdapter } = require("@bull-board/express");
 const { BullMQAdapter } = require("@bull-board/api/bullMQAdapter");
 
-const app = express();
 const PORT = 5000;
+const numCPUs = os.cpus().length;
 
-app.use(cors());
+if (cluster.isPrimary) {
+  console.log(`👑 Master ${process.pid} is running`);
+  console.log(`⚙️ Setting up ${numCPUs} workers...`);
 
-// --------------------------
-// Ensure folders exist
-["uploads", "outputs"].forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir);
-    console.log(`📁 Created folder: ${dir}/`);
+  // Fork workers based on the number of CPU cores
+  for (let i = 0; i < numCPUs; i++) {
+    const worker = cluster.fork();
+    console.log(`✅ Worker ${worker.process.pid} started`);
   }
-});
 
-// --------------------------
-// Middleware
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+  // Restart worker if one exits unexpectedly
+  cluster.on("exit", (worker, code, signal) => {
+    console.warn(
+      `⚠️ Worker ${worker.process.pid} exited (code: ${code}). Restarting...`
+    );
+    cluster.fork();
+  });
 
-// --------------------------
-// Bull Board Setup
-const serverAdapter = new ExpressAdapter();
-serverAdapter.setBasePath("/admin/queues");
+  console.log("🚀 Server cluster setup complete!");
+} else {
+  const app = express();
 
-createBullBoard({
-  queues: [new BullMQAdapter(jobQueue)],
-  serverAdapter,
-});
+  app.use(cors());
 
-app.use("/admin/queues", serverAdapter.getRouter());
+  // Ensure folders exist
+  ["uploads", "outputs"].forEach((dir) => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir);
+      console.log(`📁 Created folder: ${dir}/`);
+    }
+  });
 
-// --------------------------
-// Routes
-app.use("/process", processRoutes);
+  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json());
 
-// --------------------------
-// Start Server
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running at http://0.0.0.0:${PORT}`);
-  console.log(`📊 Bull Board available at http://localhost:${PORT}/admin/queues`);
-});
+  // Bull Board Setup
+  const serverAdapter = new ExpressAdapter();
+  serverAdapter.setBasePath("/admin/queues");
+
+  createBullBoard({
+    queues: [new BullMQAdapter(jobQueue)],
+    serverAdapter,
+  });
+
+  app.use("/admin/queues", serverAdapter.getRouter());
+
+  // Routes
+  app.use("/process", processRoutes);
+
+  // Start server
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`✨ Worker ${process.pid} running at http://0.0.0.0:${PORT}`);
+    if (cluster.worker.id === 1) {
+      console.log(
+        `📊 Bull Board available at http://localhost:${PORT}/admin/queues`
+      );
+    }
+  });
+}
