@@ -3,12 +3,7 @@ const IORedis = require("ioredis");
 const path = require("path");
 const { spawn } = require("child_process");
 const fs = require("fs");
-
-const connection = new IORedis({
-  host: "127.0.0.1",
-  port: 6379,
-  maxRetriesPerRequest: null,
-});
+const connection = require("../redisConnection/redisConnection"); 
 
 const worker = new Worker(
   "video-processing",

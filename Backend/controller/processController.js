@@ -26,7 +26,7 @@ exports.handleProcess = async (req, res) => {
   console.log(`▶️ Queuing job: ${jobId}`);
 
   // Add job to BullMQ queue
-  await jobQueue.add("video-processing-job", {
+  await jobQueue.add("video-processing", {
     inputFileName,
     cleanedOutputName,
     volume,
