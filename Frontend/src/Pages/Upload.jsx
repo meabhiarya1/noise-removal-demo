@@ -16,7 +16,6 @@ const Upload = () => {
     setFile(e.target.files[0]);
   };
 
-  console.log(file);
 
   return (
     <div className="flex flex-col justify-center items-center h-[calc(100vh-8rem)] mx-4 gap-6">
