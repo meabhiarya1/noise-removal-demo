@@ -1,12 +1,12 @@
 import "./App.css";
 import Navbar from "./Comp/Navbar/Navbar";
-import Upload from "./Pages/Upload";
+import HomePage from "./Pages/HomePage/HomePage";
 
 function App() {
   return (
     <>
       <Navbar />
-      <Upload />
+      <HomePage />
     </>
   );
 }
