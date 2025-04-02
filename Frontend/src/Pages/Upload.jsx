@@ -3,7 +3,7 @@ import style from "./Upload.module.css";
 
 const Upload = () => {
   return (
-    <div>
+    <div className="flex justify-center items-center h-[calc(100vh-8rem)]">
       <div className={style.container}>
         <div className={style.folder}>
           <div className={style.frontSide}>
