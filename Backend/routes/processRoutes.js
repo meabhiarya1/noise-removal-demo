@@ -4,8 +4,8 @@
 const express = require("express");
 const router = express.Router();
 const uploadMiddleware = require("../middleware/uploadMiddleware");
-const processController = require("../controller/processController");
+const { handleProcess } = require("../controller/processController");
 
-router.post("/", uploadMiddleware.single("video"), processController.handleProcess);
+router.post("/", uploadMiddleware.single("video"), handleProcess);
 
 module.exports = router;
