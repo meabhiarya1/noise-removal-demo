@@ -8,6 +8,7 @@ const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
 const processRoutes = require("./routes/processRoutes");
+const uploadRoutes = require("./routes/uploadRoutes");
 const jobQueue = require("./queue/jobQueue");
 
 const { createBullBoard } = require("@bull-board/api");
@@ -65,6 +66,7 @@ if (cluster.isPrimary) {
 
   // Routes
   app.use("/process", processRoutes);
+  app.use("/upload", uploadRoutes);
 
   // Start server
   app.listen(PORT, "0.0.0.0", () => {
