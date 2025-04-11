@@ -1,87 +1,142 @@
-// const fs = require("fs");
-// const path = require("path");
+const fsExSync = require("fs").promises;
+const fs = require("fs");
+const path = require("path");
 
-// // Directory where chunks will be temporarily stored
-// const CHUNKS_DIR = path.join(__dirname, "chunks");
+const CHUNKS_DIR = path.join(__dirname, "..", "video_chunks");
+if (!fs.existsSync(CHUNKS_DIR)) {
+  fs.mkdirSync(CHUNKS_DIR);
+}
 
-// if (!fs.existsSync(CHUNKS_DIR)) {
-//   fs.mkdirSync(CHUNKS_DIR); // Create chunks directory if it doesn't exist
-// }
+const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
 
-// // Middleware to handle file chunk uploads
-// const uploadChunkMiddleware = (req, res, next) => {
-//   try {
-//     const { video, chunkIndex, totalChunks } = req.body;
+async function saveChunk(chunkDir, chunkIndex, buffer) {
+  try {
+    if (!chunkDir || typeof chunkDir !== "string")
+      throw new Error("Invalid chunk directory path.");
+    if (typeof chunkIndex !== "number" || chunkIndex < 0)
+      throw new Error("Invalid chunk index.");
+    if (!buffer || !Buffer.isBuffer(buffer))
+      throw new Error("Invalid buffer received for chunk.");
 
-//     if (!video || !chunkIndex || !totalChunks) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "Missing required fields" });
-//     }
+    const chunkFileName = `${chunkIndex}.chunk`;
+    const chunkFilePath = path.join(chunkDir, chunkFileName);
 
-//     const chunkIndex = parseInt(chunkIndex);
-//     const totalChunks = parseInt(totalChunks);
+    await fsExSync.mkdir(chunkDir, { recursive: true });
+    // console.log("📁 Saving chunk file to:", chunkFilePath);
+    await fsExSync.writeFile(chunkFilePath, buffer);
 
-//     const chunkFolder = path.join(CHUNKS_DIR, `video_${Date.now()}`);
-//     if (!fs.existsSync(chunkFolder)) {
-//       fs.mkdirSync(chunkFolder); // Create directory for this specific video upload
-//     }
+    try {
+      await fsExSync.access(chunkFilePath);
+    } catch (accessErr) {
+      console.error("❌ Chunk file not accessible after write:", chunkFilePath);
+      throw new Error("Chunk file write failed.");
+    }
 
-//     const chunkPath = path.join(chunkFolder, `chunk_${chunkIndex}`);
+    // console.log("✅ Chunk saved successfully:", chunkFileName);
+  } catch (err) {
+    console.error("🔥 Error in saveChunk:", err.message);
+    throw err;
+  }
+}
 
-//     // Store the chunk file temporarily
-//     const chunkStream = fs.createWriteStream(chunkPath);
-//     video.pipe(chunkStream);
 
-//     chunkStream.on("finish", () => {
-//       console.log(`Chunk ${chunkIndex + 1} received and saved.`);
+async function mergeChunks(chunksDir, outputFilePath, totalChunks) {
+  return new Promise((resolve, reject) => {
+    const writeStream = fs.createWriteStream(outputFilePath);
+    let currentChunk = 0;
 
-//       // Check if all chunks have been uploaded
-//       const uploadedChunks = fs.readdirSync(chunkFolder).length;
-//       if (uploadedChunks === totalChunks) {
-//         // Combine the chunks into a final video file
-//         const finalVideoPath = path.join(
-//           __dirname,
-//           `final_video_${Date.now()}.mp4`
-//         );
-//         const finalStream = fs.createWriteStream(finalVideoPath);
+    function appendNext() {
+      if (currentChunk >= totalChunks) {
+        writeStream.end();
+        return resolve(outputFilePath);
+      }
 
-//         const chunkFiles = fs
-//           .readdirSync(chunkFolder)
-//           .sort(
-//             (a, b) => parseInt(a.split("_")[1]) - parseInt(b.split("_")[1])
-//           );
-//         chunkFiles.forEach((file) => {
-//           const filePath = path.join(chunkFolder, file);
-//           fs.createReadStream(filePath).pipe(finalStream, { end: false });
-//         });
+      const chunkPath = path.join(chunksDir, `${currentChunk}.chunk`);
+      const readStream = fs.createReadStream(chunkPath);
 
-//         finalStream.on("finish", () => {
-//           console.log("Final video created successfully.");
-//           // Clean up the temporary chunks
-//           fs.rmdirSync(chunkFolder, { recursive: true });
-//           return res
-//             .status(200)
-//             .json({
-//               success: true,
-//               message: "File uploaded and combined successfully.",
-//             });
-//         });
-//       } else {
-//         return res
-//           .status(200)
-//           .json({
-//             success: true,
-//             message: `Chunk ${
-//               chunkIndex + 1
-//             } uploaded. Waiting for more chunks...`,
-//           });
-//       }
-//     });
-//   } catch (error) {
-//     console.error("Error in uploadChunkMiddleware:", error);
-//     return res.status(500).json({ success: false, message: "Server error" });
-//   }
-// };
+      readStream.pipe(writeStream, { end: false });
 
-// module.exports = uploadChunkMiddleware;
+      readStream.on("end", async () => {
+        try {
+          await fsExSync.unlink(chunkPath); // 🔥 Delete chunk after merging
+          console.log(`🗑️ Deleted chunk ${currentChunk}`);
+        } catch (err) {
+          console.error(
+            `⚠️ Failed to delete chunk ${currentChunk}:`,
+            err.message
+          );
+        }
+
+        currentChunk++;
+        appendNext();
+      });
+
+      readStream.on("error", (err) => {
+        console.error("❌ Error reading chunk:", err.message);
+        reject(err);
+      });
+    }
+
+    appendNext();
+  });
+}
+
+const uploadChunkMiddleware = async (req, res, next) => {
+  try {
+    const { chunkIndex, totalChunks, uploadId } = req.body;
+    const folderName = uploadId;
+    const videoFolder = path.join(CHUNKS_DIR, folderName);
+
+    if (!req.file) {
+      console.error("No video file received.");
+      return res
+        .status(402)
+        .json({ success: false, message: "Missing video chunk" });
+    }
+
+    if (!chunkIndex || !totalChunks) {
+      console.error("Missing chunkIndex or totalChunks.");
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
+    }
+
+    const parsedChunkIndex = parseInt(chunkIndex);
+    const parsedTotalChunks = parseInt(totalChunks);
+
+    await fsExSync.mkdir(videoFolder, { recursive: true });
+    await saveChunk(videoFolder, parsedChunkIndex, req.file.buffer);
+
+    const uploadedChunks = fs.readdirSync(videoFolder).length;
+
+    if (uploadedChunks === parsedTotalChunks) {
+      const finalVideoPath = path.join(
+        __dirname,
+        "..",
+        "video_chunks",
+        folderName,
+        `${req.file.originalname.split(".")[0]}_${timestamp}.${
+          req.file.originalname.split(".")[1]
+        }`
+      );
+      await mergeChunks(videoFolder, finalVideoPath, parsedTotalChunks);
+
+      return res.status(200).json({
+        success: true,
+        message: "All chunks uploaded and merged.",
+        videoPath: finalVideoPath,
+      });
+    } else {
+      return res.status(200).json({
+        success: true,
+        message: `Chunk ${parsedChunkIndex + 1} uploaded.`,
+        uploadId,
+      });
+    }
+  } catch (error) {
+    console.error("Error in uploadChunkMiddleware:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+module.exports = { uploadChunkMiddleware };
