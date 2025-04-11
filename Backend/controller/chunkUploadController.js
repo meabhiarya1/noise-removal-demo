@@ -51,7 +51,6 @@ async function mergeChunks(chunksDir, outputFilePath, totalChunks) {
     function appendNext() {
       if (currentChunk >= totalChunks) {
         writeStream.end();
-        // console.log("✅ All chunks merged into:", outputFilePath);
         return resolve(outputFilePath);
       }
 
@@ -60,8 +59,17 @@ async function mergeChunks(chunksDir, outputFilePath, totalChunks) {
 
       readStream.pipe(writeStream, { end: false });
 
-      readStream.on("end", () => {
-        // console.log(`🔗 Merged chunk ${currentChunk}`);
+      readStream.on("end", async () => {
+        try {
+          await fsExSync.unlink(chunkPath); // 🔥 Delete chunk after merging
+          console.log(`🗑️ Deleted chunk ${currentChunk}`);
+        } catch (err) {
+          console.error(
+            `⚠️ Failed to delete chunk ${currentChunk}:`,
+            err.message
+          );
+        }
+
         currentChunk++;
         appendNext();
       });
@@ -99,6 +107,8 @@ const uploadChunkMiddleware = async (req, res, next) => {
         .json({ success: false, message: "Missing required fields" });
     }
 
+    console.log(req.file.originalname);
+
     const parsedChunkIndex = parseInt(chunkIndex);
     const parsedTotalChunks = parseInt(totalChunks);
 
@@ -113,7 +123,9 @@ const uploadChunkMiddleware = async (req, res, next) => {
         __dirname,
         "chunks",
         folderName,
-        `final_video_${timestamp}.mp4`
+        `${req.file.originalname.split(".")[0]}_${timestamp}.${
+          req.file.originalname.split(".")[1]
+        }`
       );
       await mergeChunks(videoFolder, finalVideoPath, parsedTotalChunks);
 
