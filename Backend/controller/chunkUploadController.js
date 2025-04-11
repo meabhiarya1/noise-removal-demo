@@ -3,7 +3,7 @@ const fsExSync = require("fs").promises;
 const fs = require("fs");
 const path = require("path");
 
-const CHUNKS_DIR = path.join(__dirname, "chunks");
+const CHUNKS_DIR = path.join(__dirname, "video_chunks");
 if (!fs.existsSync(CHUNKS_DIR)) {
   fs.mkdirSync(CHUNKS_DIR);
 }
@@ -42,7 +42,7 @@ async function saveChunk(chunkDir, chunkIndex, buffer) {
   }
 }
 
-// ✅ INLINE mergeChunks function
+// INLINE mergeChunks function
 async function mergeChunks(chunksDir, outputFilePath, totalChunks) {
   return new Promise((resolve, reject) => {
     const writeStream = fs.createWriteStream(outputFilePath);
@@ -86,9 +86,6 @@ async function mergeChunks(chunksDir, outputFilePath, totalChunks) {
 
 const uploadChunkMiddleware = async (req, res, next) => {
   try {
-    // console.log("Received request body:", req.body);
-    // console.log("Received files:", req.file);
-
     const { chunkIndex, totalChunks, uploadId } = req.body;
     const folderName = uploadId;
     const videoFolder = path.join(CHUNKS_DIR, folderName);
@@ -107,8 +104,6 @@ const uploadChunkMiddleware = async (req, res, next) => {
         .json({ success: false, message: "Missing required fields" });
     }
 
-    console.log(req.file.originalname);
-
     const parsedChunkIndex = parseInt(chunkIndex);
     const parsedTotalChunks = parseInt(totalChunks);
 
@@ -116,21 +111,17 @@ const uploadChunkMiddleware = async (req, res, next) => {
     await saveChunk(videoFolder, parsedChunkIndex, req.file.buffer);
 
     const uploadedChunks = fs.readdirSync(videoFolder).length;
-    // console.log(`Uploaded Chunks: ${uploadedChunks}/${parsedTotalChunks}`);
 
     if (uploadedChunks === parsedTotalChunks) {
       const finalVideoPath = path.join(
         __dirname,
-        "chunks",
+        "video_chunks",
         folderName,
         `${req.file.originalname.split(".")[0]}_${timestamp}.${
           req.file.originalname.split(".")[1]
         }`
       );
       await mergeChunks(videoFolder, finalVideoPath, parsedTotalChunks);
-
-      // Clean up chunks after merging
-      // fs.rmdirSync(videoFolder, { recursive: true });
 
       return res.status(200).json({
         success: true,
@@ -150,7 +141,7 @@ const uploadChunkMiddleware = async (req, res, next) => {
   }
 };
 
-const handleChunkUpload = (req, res) => {
+exports.handleChunkUpload = (req, res) => {
   upload(req, res, (err) => {
     if (err) {
       console.error("Multer error:", err);
@@ -160,4 +151,3 @@ const handleChunkUpload = (req, res) => {
   });
 };
 
-module.exports = { handleChunkUpload };
