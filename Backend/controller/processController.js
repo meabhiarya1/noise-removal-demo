@@ -8,20 +8,24 @@ exports.handleProcess = async (req, res) => {
     return res.status(400).send("No video file uploaded.");
   }
 
+  const { finalVideoPath, originalName } = req;
+
+  ///maintain all the file names and paths in the same format as the original file name
+
   const volume = req.body.volume || "5.0";
   const noiseDuration = req.body.noise || "5";
-  const jobId = uuidv4();
+  // const jobId = uuidv4();
 
-  const originalName = req.file.originalname;
-  const inputFileName = `${jobId}_${originalName}`;
+  // const originalName = req.file.originalname;
+  // const inputFileName = `${jobId}_${originalName}`;
   const cleanedOutputName = `${jobId}_${
     path.parse(originalName).name
   }_cleaned.mp4`;
 
-  const uploadedPath = path.join(__dirname, "../uploads", inputFileName);
+  // const uploadedPath = path.join(__dirname, "../uploads", inputFileName);
 
   // Rename the uploaded file to ensure uniqueness
-  fs.renameSync(req.file.path, uploadedPath);
+  // fs.renameSync(req.file.path, uploadedPath);
 
   console.log(`▶️ Queuing job: ${jobId}`);
 
@@ -39,4 +43,3 @@ exports.handleProcess = async (req, res) => {
     outputFileName: cleanedOutputName,
   });
 };
-

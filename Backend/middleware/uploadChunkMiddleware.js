@@ -56,10 +56,7 @@ const uploadChunkMiddleware = (req, res, next) => {
 
         // ✅ Attach merged file path to req
         req.finalVideoPath = finalVideoPath;
-        req.uploadId = uploadId;
         req.originalFileName = originalFileName;
-
-        console.log(finalVideoPath, uploadId, originalFileName)
 
         return next(); // ✅ Go to handleProcess controller
       } else {
