@@ -4,7 +4,6 @@ import style from "./Upload.module.css";
 import { FiUploadCloud } from "react-icons/fi";
 import { MdEdit } from "react-icons/md";
 import axios from "axios";
-import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import FormData from "form-data";
 
@@ -35,9 +34,7 @@ const Upload = () => {
           `${import.meta.env.VITE_API_URL}/upload/upload-chunk`,
           formData,
           {
-            headers: {
-              "Content-Type": "multipart/form-data", // ✅ Required for FormData
-            },
+  
             onUploadProgress: (event) => {
               const percentPerChunk = 100 / totalChunks;
               const currentChunkProgress =

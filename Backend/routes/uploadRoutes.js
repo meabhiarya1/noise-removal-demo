@@ -3,11 +3,11 @@
 // --------------------------
 const express = require("express");
 const router = express.Router();
-const upload = require("../middleware/uploadChunkMiddleware");
 const {
-  handleChunkUpload,
-} = require("../controller/chunkUploadController");
+  uploadChunkMiddleware,
+} = require("../middleware/uploadChunkMiddleware");
+const { handleProcess } = require("../controller/processController");
 
-router.post("/upload-chunk", handleChunkUpload);
+router.post("/upload-chunk", uploadChunkMiddleware, handleProcess);
 
 module.exports = router;
