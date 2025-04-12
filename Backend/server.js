@@ -67,6 +67,9 @@ if (cluster.isPrimary) {
   // Routes
   app.use("/process", processRoutes);
   app.use("/upload", uploadRoutes);
+  app.get("/", (req, res) => {
+    res.status(200).send("Server is running!");
+  });
 
   // Start server
   app.listen(PORT, "0.0.0.0", () => {

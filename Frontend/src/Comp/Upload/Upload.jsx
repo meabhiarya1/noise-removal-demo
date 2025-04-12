@@ -4,47 +4,40 @@ import style from "./Upload.module.css";
 import { FiUploadCloud } from "react-icons/fi";
 import { MdEdit } from "react-icons/md";
 import axios from "axios";
+import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
+import FormData from "form-data";
 
 const Upload = () => {
   const [file, setFile] = useState();
   const [uploadProgress, setUploadProgress] = useState(0); // for overall progress
   const fileInputRef = useRef();
   const videoURL = file ? URL.createObjectURL(file) : null;
-  const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
-  const uploadId = uuidv4();
-
+  const CHUNK_SIZE = 1024 * 1024 * 10; // 10MB
   const uploadFileInChunks = async (file) => {
+    const uploadId = uuidv4();
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
       const start = chunkIndex * CHUNK_SIZE;
-      const end = Math.min(file.size, start + CHUNK_SIZE);
-      const chunk = file.slice(start, end);
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunk = file.slice(start, end); // ✅ Blob for browser
 
       const formData = new FormData();
-      formData.append("chunk", chunk);
+      formData.append("video", chunk); // ✅ Must be 'video' as expected by backend multer.single('video')
       formData.append("chunkIndex", chunkIndex);
       formData.append("totalChunks", totalChunks);
-      formData.append("fileName", file?.name);
       formData.append("uploadId", uploadId);
-
-      // ✅ Log FormData details for debugging
-      console.log(`📦 Uploading chunk ${chunkIndex + 1}/${totalChunks}`);
-      console.log(`Start: ${start}, End: ${end}, Size: ${chunk.size} bytes`);
-      for (let pair of formData.entries()) {
-        if (pair[0] === "chunk") {
-          console.log(`[FormData] ${pair[0]}: Blob - size: ${pair[1].size}`);
-        } else {
-          console.log(`[FormData] ${pair[0]}:`, pair[1]);
-        }
-      }
+      formData.append("fileName", file.name); 
 
       try {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/upload-chunk`,
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/upload/upload-chunk`,
           formData,
           {
+            headers: {
+              "Content-Type": "multipart/form-data", // ✅ Required for FormData
+            },
             onUploadProgress: (event) => {
               const percentPerChunk = 100 / totalChunks;
               const currentChunkProgress =
@@ -56,14 +49,22 @@ const Upload = () => {
           }
         );
 
-        console.log(`✅ Uploaded chunk ${chunkIndex + 1}/${totalChunks}`);
+        if (!response.data.success) {
+          console.error(`❌ Failed chunk ${chunkIndex + 1}`);
+          break;
+        } else {
+          console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} uploaded`);
+        }
       } catch (err) {
-        console.error(`❌ Error uploading chunk ${chunkIndex}`, err);
+        console.error(
+          `❌ Error uploading chunk ${chunkIndex + 1}:`,
+          err.message
+        );
         break;
       }
     }
 
-    console.log("🎉 Upload complete!");
+    console.log("🎉 Upload completed for:", file.name);
   };
 
   const handleChangeVideo = () => {

@@ -14,6 +14,8 @@ const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
 const uploadChunkMiddleware = async (req, res, next) => {
   try {
     const { chunkIndex, totalChunks, uploadId } = req.body;
+    const originalFileName = req.body.fileName || `video_${uploadId}.mp4`;
+    console.log(chunkIndex, totalChunks, uploadId);
     const folderName = uploadId;
     const videoFolder = path.join(CHUNKS_DIR, folderName);
 
@@ -45,9 +47,7 @@ const uploadChunkMiddleware = async (req, res, next) => {
         "..",
         "video_chunks",
         folderName,
-        `${req.file.originalname.split(".")[0]}_${timestamp}.${
-          req.file.originalname.split(".")[1]
-        }`
+        `${timestamp}_${originalFileName}`
       );
       await mergeChunks(videoFolder, finalVideoPath, parsedTotalChunks);
 
