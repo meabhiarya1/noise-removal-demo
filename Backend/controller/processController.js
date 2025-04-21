@@ -8,38 +8,27 @@ exports.handleProcess = async (req, res) => {
     return res.status(400).send("No video file uploaded.");
   }
 
-  const { finalVideoPath, originalName } = req;
+  const { finalVideoPath, originalFileName } = req;
 
   ///maintain all the file names and paths in the same format as the original file name
-
   const volume = req.body.volume || "5.0";
   const noiseDuration = req.body.noise || "5";
-  // const jobId = uuidv4();
 
   // const originalName = req.file.originalname;
-  // const inputFileName = `${jobId}_${originalName}`;
-  const cleanedOutputName = `${jobId}_${
-    path.parse(originalName).name
-  }_cleaned.mp4`;
-
-  // const uploadedPath = path.join(__dirname, "../uploads", inputFileName);
-
-  // Rename the uploaded file to ensure uniqueness
-  // fs.renameSync(req.file.path, uploadedPath);
-
-  console.log(`▶️ Queuing job: ${jobId}`);
+  const inputFileName = path.basename(finalVideoPath);
 
   // Add job to BullMQ queue
-  await jobQueue.add("video-processing", {
+  const job = await jobQueue.add("video-processing", {
     inputFileName,
-    cleanedOutputName,
+    originalFileName,
+    finalVideoPath,
     volume,
     noiseDuration,
   });
 
   res.status(202).json({
     message: "Processing started.",
-    jobId,
-    outputFileName: cleanedOutputName,
+    jobId: job.id,
+    outputFileName: originalFileName,
   });
 };

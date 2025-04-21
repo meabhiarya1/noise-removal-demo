@@ -2,27 +2,31 @@ const { Worker } = require("bullmq");
 const path = require("path");
 const { spawn } = require("child_process");
 const fs = require("fs");
-const connection = require("../redisConnection/redisConnection"); 
+const connection = require("../redisConnection/redisConnection");
 
 const worker = new Worker(
   "video-processing",
   async (job) => {
-    const { inputFileName, cleanedOutputName, volume, noiseDuration } =
-      job.data;
-
-    const inputPath = path.join(__dirname, "../uploads", inputFileName);
+    const {
+      inputFileName,
+      originalFileName,
+      finalVideoPath,
+      volume,
+      noiseDuration,
+    } = job.data;
 
     console.log(`▶️ Worker processing job: ${job.id}`);
     console.log(`📂 Input: ${inputFileName}`);
-    console.log(`📤 Output: ${cleanedOutputName}`);
+    console.log(`📤 Output: ${originalFileName}`);
+    console.log(`📁 Full Path: ${finalVideoPath}`);
 
     return new Promise((resolve, reject) => {
       const py = spawn("venv/bin/python", [
         "noise_cleaner.py",
         volume,
         noiseDuration,
-        inputFileName,
-        cleanedOutputName,
+        finalVideoPath,  
+        originalFileName,
       ]);
 
       py.stdout.on("data", (data) => {
@@ -34,7 +38,7 @@ const worker = new Worker(
       });
 
       py.on("close", (code) => {
-        fs.unlink(inputPath, () => {}); // Clean up uploaded input after processing
+        fs.unlink(finalVideoPath, () => {}); // Cleanup
 
         if (code === 0) {
           console.log(`✅ Job ${job.id} done`);
@@ -53,12 +57,15 @@ console.log("👷 Worker started and listening for jobs...");
 worker.on("completed", (job) => {
   console.log(`✅ Job completed: ${job.id}`);
 });
+
 worker.on("failed", (job, err) => {
   console.error(`❌ Job failed: ${job.id} with error ${err.message}`);
 });
+
 worker.on("error", (err) => {
   console.error(`❌ Worker error: ${err.message}`);
 });
+
 worker.on("stalled", (job) => {
   console.warn(`⚠️ Job stalled: ${job.id}`);
 });

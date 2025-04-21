@@ -62,7 +62,15 @@ const uploadFileInChunks = async (filePath) => {
   );
 
   for (let i = 0; i < totalChunks; i++) {
-    await uploadChunk(filePath, i, totalChunks, uploadId);
+    try {
+      await uploadChunk(filePath, i, totalChunks, uploadId);
+    } catch (err) {
+      console.error(
+        `❌ [${path.basename(filePath)}] Upload failed:`,
+        err.message
+      );
+      return;
+    }
   }
 
   console.log(`✅ [${path.basename(filePath)}] Upload completed.`);

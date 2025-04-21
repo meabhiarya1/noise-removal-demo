@@ -7,13 +7,14 @@ const { saveChunk } = require("../services/saveChunk");
 const { mergeChunks } = require("../services/mergeChunks");
 const fs = require("fs");
 const path = require("path");
+const { v4: uuidv4 } = require("uuid");
+
 
 const CHUNKS_DIR = path.join(__dirname, "..", "video_chunks");
 if (!fs.existsSync(CHUNKS_DIR)) {
   fs.mkdirSync(CHUNKS_DIR);
 }
 
-const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage }).single("video"); // MUST be 'video'
 
@@ -48,15 +49,14 @@ const uploadChunkMiddleware = (req, res, next) => {
       const uploadedChunks = fs.readdirSync(videoFolder).length;
 
       if (uploadedChunks === parsedTotalChunks) {
-        const finalVideoPath = path.join(
-          videoFolder,
-          `${timestamp}_${originalFileName}`
-        );
+        const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
+        const uniqueFileName = `${timestamp}_${uuidv4()}_${originalFileName}`;
+        const finalVideoPath = path.join(videoFolder, uniqueFileName);
         await mergeChunks(videoFolder, finalVideoPath, parsedTotalChunks);
 
         // ✅ Attach merged file path to req
         req.finalVideoPath = finalVideoPath;
-        req.originalFileName = originalFileName;
+        req.originalFileName = uniqueFileName;
 
         return next(); // ✅ Go to handleProcess controller
       } else {
