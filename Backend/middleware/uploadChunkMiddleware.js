@@ -50,13 +50,14 @@ const uploadChunkMiddleware = (req, res, next) => {
 
       if (uploadedChunks === parsedTotalChunks) {
         const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, "");
-        const uniqueFileName = `${timestamp}_${uuidv4()}_${originalFileName}`;
+        const uniqueFileName = `${uploadId}_${originalFileName}`;
         const finalVideoPath = path.join(videoFolder, uniqueFileName);
         await mergeChunks(videoFolder, finalVideoPath, parsedTotalChunks);
 
         // ✅ Attach merged file path to req
         req.finalVideoPath = finalVideoPath;
         req.originalFileName = uniqueFileName;
+        req.uploadId = uploadId;
 
         return next(); // ✅ Go to handleProcess controller
       } else {

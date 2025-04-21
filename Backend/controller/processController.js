@@ -8,7 +8,7 @@ exports.handleProcess = async (req, res) => {
     return res.status(400).send("No video file uploaded.");
   }
 
-  const { finalVideoPath, originalFileName } = req;
+  const { finalVideoPath, originalFileName, uploadId } = req;
 
   ///maintain all the file names and paths in the same format as the original file name
   const volume = req.body.volume || "5.0";
@@ -24,6 +24,7 @@ exports.handleProcess = async (req, res) => {
     finalVideoPath,
     volume,
     noiseDuration,
+    uploadId
   });
 
   res.status(202).json({

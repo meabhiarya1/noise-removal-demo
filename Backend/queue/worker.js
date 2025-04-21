@@ -13,6 +13,7 @@ const worker = new Worker(
       finalVideoPath,
       volume,
       noiseDuration,
+      uploadId,
     } = job.data;
 
     console.log(`▶️ Worker processing job: ${job.id}`);
@@ -23,9 +24,10 @@ const worker = new Worker(
     return new Promise((resolve, reject) => {
       const py = spawn("venv/bin/python", [
         "noise_cleaner.py",
+        uploadId,
         volume,
         noiseDuration,
-        finalVideoPath,  
+        finalVideoPath,
         originalFileName,
       ]);
 
@@ -38,7 +40,7 @@ const worker = new Worker(
       });
 
       py.on("close", (code) => {
-        fs.unlink(finalVideoPath, () => {}); // Cleanup
+        fs.unlink(".." + finalVideoPath, () => {}); // Cleanup
 
         if (code === 0) {
           console.log(`✅ Job ${job.id} done`);
