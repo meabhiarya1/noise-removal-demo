@@ -40,14 +40,35 @@ const worker = new Worker(
       });
 
       py.on("close", (code) => {
-        fs.unlink(".." + finalVideoPath, () => {}); // Cleanup
+        const absoluteFinalVideoPath = path.resolve(
+          __dirname,
+          "..",
+          finalVideoPath
+        );
+        const folderPath = path.dirname(absoluteFinalVideoPath);
 
-        if (code === 0) {
-          console.log(`✅ Job ${job.id} done`);
-          resolve();
-        } else {
-          reject(new Error(`Python process failed with code ${code}`));
+        console.log("🧭 Absolute path to folder:", folderPath);
+
+        if (!fs.existsSync(folderPath)) {
+          console.warn("⚠️ Folder not found for deletion:", folderPath);
         }
+
+        setTimeout(() => {
+          fs.rm(folderPath, { recursive: true, force: true }, (err) => {
+            if (err) {
+              console.error("❌ Failed to delete folder:", folderPath, err);
+            } else {
+              console.log(`🧹 Cleaned up folder: ${folderPath}`);
+            }
+
+            if (code === 0) {
+              console.log(`✅ Job ${job.id} done`);
+              resolve();
+            } else {
+              reject(new Error(`Python process failed with code ${code}`));
+            }
+          });
+        }, 500);
       });
     });
   },
