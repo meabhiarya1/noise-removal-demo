@@ -9,6 +9,7 @@ const fs = require("fs");
 const cors = require("cors");
 const processRoutes = require("./routes/processRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
+const jobRoutes = require("./routes/jobRoutes");
 const jobQueue = require("./queue/jobQueue");
 
 const { createBullBoard } = require("@bull-board/api");
@@ -39,7 +40,6 @@ if (cluster.isPrimary) {
   console.log("🚀 Server cluster setup complete!");
 } else {
   const app = express();
-
   app.use(cors());
 
   // Ensure folders exist
@@ -67,6 +67,7 @@ if (cluster.isPrimary) {
   // Routes
   app.use("/process", processRoutes);
   app.use("/upload", uploadRoutes);
+  app.use("/job", jobRoutes);
   app.get("/", (req, res) => {
     res.status(200).send("Server is running!");
   });

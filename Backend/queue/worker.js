@@ -31,12 +31,30 @@ const worker = new Worker(
         originalFileName,
       ]);
 
-      py.stdout.on("data", (data) => {
-        process.stdout.write(`📦 Python: ${data}`);
+      py.stdout.on("data", async (data) => {
+        const lines = data.toString().split("\n");
+        for (let line of lines) {
+          line = line.trim();
+          // Basic check if the line looks like a JSON object
+          if (line.startsWith("{") && line.endsWith("}")) {
+            try {
+              const json = JSON.parse(line);
+              if (json.progress !== undefined) {
+                console.log("Progress:", json.progress);
+                // Update progress in BullMQ for polling
+                await job.updateProgress(json.progress);
+              }
+            } catch (err) {
+              console.error("❌ JSON parsing failed:", err);
+            }
+          } else {
+            console.log("📄 Non-JSON log:", line);
+          }
+        }
       });
 
       py.stderr.on("data", (data) => {
-        process.stderr.write(`⚠️ Python Error: ${data}`);
+        console.error("⚠️ Python Error:", data.toString());
       });
 
       py.on("close", (code) => {

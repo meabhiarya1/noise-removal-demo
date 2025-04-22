@@ -4,6 +4,8 @@ import subprocess
 import glob
 import traceback
 import uuid
+import json
+import time
 
 # 🧾 Arguments
 upload_id = sys.argv[1] if len(sys.argv) > 1 else "default_upload"
@@ -25,12 +27,20 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 FINAL_OUTPUT = os.path.join(OUTPUT_FOLDER, output_file)
 
+def report_progress(progress):
+    """Helper function to report progress to stdout in JSON format"""
+    progress_data = {'progress': progress}
+    print(json.dumps(progress_data))
+    sys.stdout.flush()
+
 try:
     print("🔍 Extracting audio from video...")
     subprocess.run([
         "ffmpeg", "-y", "-i", INPUT_VIDEO,
         "-vn", "-acodec", "pcm_s16le", "-ar", "48000", TEMP_AUDIO
     ], check=True)
+
+    report_progress(25)  # Report 25% after audio extraction
 
     print("🌀 Enhancing audio using DeepFilterNet...")
     subprocess.run([
@@ -39,6 +49,8 @@ try:
         "--output-dir", "uploads"
     ], check=True)
 
+    report_progress(50)  # Report 50% after audio enhancement
+
     print("🔎 Finding DeepFilterNet enhanced output...")
     pattern = TEMP_AUDIO.replace(".wav", "") + "_*.wav"
     matches = glob.glob(os.path.join("uploads", os.path.basename(pattern)))
@@ -46,6 +58,8 @@ try:
         raise FileNotFoundError("DeepFilterNet output not found.")
 
     os.rename(matches[0], CLEANED_AUDIO)
+
+    report_progress(75)  # Report 75% after renaming the enhanced audio file
 
     print("🎬 Merging cleaned audio back with video...")
     subprocess.run([
@@ -59,6 +73,8 @@ try:
         "-shortest",
         FINAL_OUTPUT
     ], check=True)
+
+    report_progress(100)  # Report 100% after merging the cleaned audio
 
     print("✅ Processing complete! Output saved to:", FINAL_OUTPUT)
 

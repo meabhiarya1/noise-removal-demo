@@ -6,35 +6,125 @@ import { MdEdit } from "react-icons/md";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import FormData from "form-data";
+import ProgressBar from "../ProgressBar/Progress";
 
 const Upload = () => {
   const [file, setFile] = useState();
   const [uploadProgress, setUploadProgress] = useState(0); // for overall progress
+  const [processingProgress, setProcessingProgress] = useState(null);
+
   const fileInputRef = useRef();
   const videoURL = file ? URL.createObjectURL(file) : null;
   const CHUNK_SIZE = 1024 * 1024 * 10; // 10MB
+
+  const pollJobProgress = async (jobId) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_URL}/job/${jobId}/progress`
+        );
+        const progress = res.data.progress;
+        console.log("📊 Job progress:", progress);
+
+        setProcessingProgress(progress);
+
+        if (progress === 100 || res.data.status === "completed") {
+          clearInterval(interval);
+          console.log("✅ Job completed!");
+        }
+
+        if (res.data.status === "failed") {
+          clearInterval(interval);
+          console.error("❌ Job failed.");
+        }
+      } catch (err) {
+        console.error("❌ Error fetching job progress:", err.message);
+        clearInterval(interval);
+      }
+    }, 2000); // poll every 2s
+  };
+
+  // const uploadFileInChunks = async (file) => {
+  //   const uploadId = uuidv4();
+  //   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+  //   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+  //     const start = chunkIndex * CHUNK_SIZE;
+  //     const end = Math.min(start + CHUNK_SIZE, file.size);
+  //     const chunk = file.slice(start, end); // ✅ Blob for browser
+
+  //     const formData = new FormData();
+  //     formData.append("video", chunk); // ✅ Must be 'video' as expected by backend multer.single('video')
+  //     formData.append("chunkIndex", chunkIndex);
+  //     formData.append("totalChunks", totalChunks);
+  //     formData.append("uploadId", uploadId);
+  //     formData.append("fileName", file.name);
+
+  //     try {
+  //       const response = await axios.post(
+  //         `${import.meta.env.VITE_API_URL}/upload/upload-chunk`,
+  //         formData,
+  //         {
+  //           onUploadProgress: (event) => {
+  //             const percentPerChunk = 100 / totalChunks;
+  //             const currentChunkProgress =
+  //               (event.loaded / event.total) * percentPerChunk;
+  //             const totalUploaded =
+  //               chunkIndex * percentPerChunk + currentChunkProgress;
+  //             setUploadProgress(Math.min(totalUploaded, 100));
+  //           },
+  //         }
+  //       );
+
+  //       if (response.data.jobId) {
+  //         console.log("📦 Job ID:", response.data.jobId);
+  //         var jobId = response.data.jobId;
+  //       }
+
+  //       if (!response.data.success) {
+  //         console.error(`❌ Failed chunk ${chunkIndex + 1}`);
+  //         break;
+  //       } else {
+  //         console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} uploaded`);
+  //       }
+  //     } catch (err) {
+  //       console.error(
+  //         `❌ Error uploading chunk ${chunkIndex + 1}:`,
+  //         err.message
+  //       );
+  //       break;
+  //     }
+  //   }
+
+  //   if (jobId) {
+  //     console.log("📦 All chunks uploaded, starting job progress tracking");
+  //     pollJobProgress(jobId);
+  //   }
+
+  //   console.log("🎉 Upload completed for:", file.name);
+  // };
   const uploadFileInChunks = async (file) => {
     const uploadId = uuidv4();
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    let jobId = null; // Define here so it's accessible later
 
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
       const start = chunkIndex * CHUNK_SIZE;
       const end = Math.min(start + CHUNK_SIZE, file.size);
-      const chunk = file.slice(start, end); // ✅ Blob for browser
+      const chunk = file.slice(start, end);
 
       const formData = new FormData();
-      formData.append("video", chunk); // ✅ Must be 'video' as expected by backend multer.single('video')
+      formData.append("video", chunk);
       formData.append("chunkIndex", chunkIndex);
       formData.append("totalChunks", totalChunks);
       formData.append("uploadId", uploadId);
-      formData.append("fileName", file.name); 
+      formData.append("fileName", file.name);
 
       try {
         const response = await axios.post(
           `${import.meta.env.VITE_API_URL}/upload/upload-chunk`,
           formData,
           {
-  
             onUploadProgress: (event) => {
               const percentPerChunk = 100 / totalChunks;
               const currentChunkProgress =
@@ -45,6 +135,11 @@ const Upload = () => {
             },
           }
         );
+
+        if (response.data.jobId && !jobId) {
+          jobId = response.data.jobId;
+          console.log("📦 Job ID received:", jobId);
+        }
 
         if (!response.data.success) {
           console.error(`❌ Failed chunk ${chunkIndex + 1}`);
@@ -59,6 +154,13 @@ const Upload = () => {
         );
         break;
       }
+    }
+
+    if (jobId) {
+      console.log("📦 All chunks uploaded. Tracking job progress...");
+      pollJobProgress(jobId); // ✅ Start polling only once
+    } else {
+      console.warn("⚠️ No jobId returned. Progress tracking skipped.");
     }
 
     console.log("🎉 Upload completed for:", file.name);
@@ -144,16 +246,30 @@ const Upload = () => {
           {file?.name}
         </p>
       )}
+    
       {/* Progress bar */}
       {uploadProgress > 0 && (
+        // <div className="w-full max-w-[720px]">
+        //   <progress
+        //     value={uploadProgress}
+        //     max="100"
+        //     className="w-full h-2 bg-gray-200 rounded-full"
+        //   ></progress>
+        //   <p className="text-gray-500 text-center mt-2">
+        //     {uploadProgress}% uploaded
+        //   </p>
+        // </div>
+        <ProgressBar uploadProgress={uploadProgress} />
+      )}
+      {processingProgress > 0 && (
         <div className="w-full max-w-[720px]">
           <progress
-            value={uploadProgress}
+            value={processingProgress}
             max="100"
             className="w-full h-2 bg-gray-200 rounded-full"
           ></progress>
           <p className="text-gray-500 text-center mt-2">
-            {uploadProgress}% uploaded
+            {processingProgress}% Processed
           </p>
         </div>
       )}
