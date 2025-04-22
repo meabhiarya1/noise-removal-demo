@@ -10,8 +10,10 @@ import ProgressBar from "../ProgressBar/Progress";
 
 const Upload = () => {
   const [file, setFile] = useState();
-  const [uploadProgress, setUploadProgress] = useState(0); // for overall progress
-  const [processingProgress, setProcessingProgress] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0); // for overall upload progress
+  const [processingProgress, setProcessingProgress] = useState(0); // for processing progress
+  const [isUploading, setIsUploading] = useState(false); // Track whether uploading is in progress
+  const [isProcessing, setIsProcessing] = useState(false); // Track whether processing is in progress
 
   const fileInputRef = useRef();
   const videoURL = file ? URL.createObjectURL(file) : null;
@@ -31,82 +33,28 @@ const Upload = () => {
         if (progress === 100 || res.data.status === "completed") {
           clearInterval(interval);
           console.log("✅ Job completed!");
+          setIsProcessing(false); // End processing phase
         }
 
         if (res.data.status === "failed") {
           clearInterval(interval);
           console.error("❌ Job failed.");
+          setIsProcessing(false); // End processing phase
         }
       } catch (err) {
         console.error("❌ Error fetching job progress:", err.message);
         clearInterval(interval);
+        setIsProcessing(false); // End processing phase
       }
     }, 2000); // poll every 2s
   };
 
-  // const uploadFileInChunks = async (file) => {
-  //   const uploadId = uuidv4();
-  //   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-
-  //   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-  //     const start = chunkIndex * CHUNK_SIZE;
-  //     const end = Math.min(start + CHUNK_SIZE, file.size);
-  //     const chunk = file.slice(start, end); // ✅ Blob for browser
-
-  //     const formData = new FormData();
-  //     formData.append("video", chunk); // ✅ Must be 'video' as expected by backend multer.single('video')
-  //     formData.append("chunkIndex", chunkIndex);
-  //     formData.append("totalChunks", totalChunks);
-  //     formData.append("uploadId", uploadId);
-  //     formData.append("fileName", file.name);
-
-  //     try {
-  //       const response = await axios.post(
-  //         `${import.meta.env.VITE_API_URL}/upload/upload-chunk`,
-  //         formData,
-  //         {
-  //           onUploadProgress: (event) => {
-  //             const percentPerChunk = 100 / totalChunks;
-  //             const currentChunkProgress =
-  //               (event.loaded / event.total) * percentPerChunk;
-  //             const totalUploaded =
-  //               chunkIndex * percentPerChunk + currentChunkProgress;
-  //             setUploadProgress(Math.min(totalUploaded, 100));
-  //           },
-  //         }
-  //       );
-
-  //       if (response.data.jobId) {
-  //         console.log("📦 Job ID:", response.data.jobId);
-  //         var jobId = response.data.jobId;
-  //       }
-
-  //       if (!response.data.success) {
-  //         console.error(`❌ Failed chunk ${chunkIndex + 1}`);
-  //         break;
-  //       } else {
-  //         console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} uploaded`);
-  //       }
-  //     } catch (err) {
-  //       console.error(
-  //         `❌ Error uploading chunk ${chunkIndex + 1}:`,
-  //         err.message
-  //       );
-  //       break;
-  //     }
-  //   }
-
-  //   if (jobId) {
-  //     console.log("📦 All chunks uploaded, starting job progress tracking");
-  //     pollJobProgress(jobId);
-  //   }
-
-  //   console.log("🎉 Upload completed for:", file.name);
-  // };
   const uploadFileInChunks = async (file) => {
     const uploadId = uuidv4();
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-    let jobId = null; // Define here so it's accessible later
+    let jobId = null;
+
+    setIsUploading(true); // Start upload phase
 
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
       const start = chunkIndex * CHUNK_SIZE;
@@ -158,9 +106,12 @@ const Upload = () => {
 
     if (jobId) {
       console.log("📦 All chunks uploaded. Tracking job progress...");
-      pollJobProgress(jobId); // ✅ Start polling only once
+      setIsUploading(false); // End upload phase
+      setIsProcessing(true); // Start processing phase
+      pollJobProgress(jobId); // Start polling job progress
     } else {
       console.warn("⚠️ No jobId returned. Progress tracking skipped.");
+      setIsUploading(false); // End upload phase
     }
 
     console.log("🎉 Upload completed for:", file.name);
@@ -246,32 +197,12 @@ const Upload = () => {
           {file?.name}
         </p>
       )}
-    
+
       {/* Progress bar */}
-      {uploadProgress > 0 && (
-        // <div className="w-full max-w-[720px]">
-        //   <progress
-        //     value={uploadProgress}
-        //     max="100"
-        //     className="w-full h-2 bg-gray-200 rounded-full"
-        //   ></progress>
-        //   <p className="text-gray-500 text-center mt-2">
-        //     {uploadProgress}% uploaded
-        //   </p>
-        // </div>
-        <ProgressBar uploadProgress={uploadProgress} />
-      )}
-      {processingProgress > 0 && (
-        <div className="w-full max-w-[720px]">
-          <progress
-            value={processingProgress}
-            max="100"
-            className="w-full h-2 bg-gray-200 rounded-full"
-          ></progress>
-          <p className="text-gray-500 text-center mt-2">
-            {processingProgress}% Processed
-          </p>
-        </div>
+      {(isUploading || isProcessing) && (
+        <ProgressBar
+          progress={isUploading ? uploadProgress : processingProgress}
+        />
       )}
     </div>
   );
