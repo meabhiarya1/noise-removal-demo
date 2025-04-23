@@ -14,3 +14,10 @@ npm install
 
 # 5. Run the server
 npm start
+
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+COOKIE_KEY=
+
+Update these things in .env file.

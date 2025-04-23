@@ -12,6 +12,9 @@ const uploadRoutes = require("./routes/uploadRoutes");
 const jobRoutes = require("./routes/jobRoutes");
 const jobQueue = require("./queue/jobQueue");
 
+const authRoutes = require("./routes/authRoutes");
+const cookieSession = require("cookie-session");
+
 const { createBullBoard } = require("@bull-board/api");
 const { ExpressAdapter } = require("@bull-board/express");
 const { BullMQAdapter } = require("@bull-board/api/bullMQAdapter");
@@ -40,7 +43,26 @@ if (cluster.isPrimary) {
   console.log("🚀 Server cluster setup complete!");
 } else {
   const app = express();
-  app.use(cors());
+  const passport = require("passport");
+  app.use(
+    cors({
+      origin: "http://localhost:5173",
+      credentials: true,
+    })
+  );
+  require("dotenv").config();
+  require("./config/passport");
+
+  app.use(
+    cookieSession({
+      name: "session",
+      keys: [process.env.COOKIE_KEY],
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    })
+  );
+
+  app.use(passport.initialize());
+  app.use(passport.session());
 
   // Ensure folders exist
   ["uploads", "outputs"].forEach((dir) => {
@@ -68,6 +90,7 @@ if (cluster.isPrimary) {
   app.use("/process", processRoutes);
   app.use("/upload", uploadRoutes);
   app.use("/job", jobRoutes);
+  app.use("/auth", authRoutes);
   app.get("/", (req, res) => {
     res.status(200).send("Server is running!");
   });
