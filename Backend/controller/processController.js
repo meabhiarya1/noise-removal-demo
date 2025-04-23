@@ -24,12 +24,13 @@ exports.handleProcess = async (req, res) => {
     finalVideoPath,
     volume,
     noiseDuration,
-    uploadId
+    uploadId,
   });
 
   res.status(202).json({
     message: "Processing started.",
     jobId: job.id,
     outputFileName: originalFileName,
+    success: true,
   });
 };

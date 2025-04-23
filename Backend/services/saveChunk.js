@@ -14,17 +14,25 @@ const saveChunk = async (chunkDir, chunkIndex, buffer) => {
     const chunkFilePath = path.join(chunkDir, chunkFileName);
 
     await fsExSync.mkdir(chunkDir, { recursive: true });
-    // console.log("📁 Saving chunk file to:", chunkFilePath);
+
+    console.log("💾 Writing chunk:", {
+      chunkFilePath,
+      chunkIndex,
+      chunkSize: buffer.length,
+    });
+
     await fsExSync.writeFile(chunkFilePath, buffer);
 
     try {
       await fsExSync.access(chunkFilePath);
+      const stats = await fsExSync.stat(chunkFilePath);
+      console.log(
+        `✅ Chunk saved: ${chunkFileName}, Size: ${stats.size} bytes`
+      );
     } catch (accessErr) {
       console.error("❌ Chunk file not accessible after write:", chunkFilePath);
       throw new Error("Chunk file write failed.");
     }
-
-    // console.log("✅ Chunk saved successfully:", chunkFileName);
   } catch (err) {
     console.error("🔥 Error in saveChunk:", err.message);
     throw err;

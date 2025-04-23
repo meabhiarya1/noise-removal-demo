@@ -84,22 +84,48 @@ const Upload = () => {
           }
         );
 
-        if (response.data.jobId && !jobId) {
+        if (response.data?.jobId && !jobId) {
           jobId = response.data.jobId;
           console.log("📦 Job ID received:", jobId);
         }
 
-        if (!response.data.success) {
-          console.error(`❌ Failed chunk ${chunkIndex + 1}`);
+        const isSuccess =
+          response.data?.success === true ||
+          response.data?.message?.toLowerCase().includes("processing started");
+
+        if (!isSuccess) {
+          console.error(
+            `❌ Unexpected response for chunk ${chunkIndex + 1}`,
+            response.data
+          );
           break;
-        } else {
-          console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} uploaded`);
         }
-      } catch (err) {
-        console.error(
-          `❌ Error uploading chunk ${chunkIndex + 1}:`,
-          err.message
+
+        if (response.data?.jobId && !jobId) {
+          jobId = response.data.jobId;
+          console.log("📦 Job ID received:", jobId);
+        }
+
+        console.log(
+          `✅ Chunk ${
+            chunkIndex + 1
+          }/${totalChunks} uploaded or processing started`
         );
+      } catch (err) {
+        if (err.response) {
+          console.error(
+            `❌ Error uploading chunk ${chunkIndex + 1}: ${err.message}`,
+            {
+              status: err.response.status,
+              data: err.response.data,
+            }
+          );
+        } else {
+          console.error(
+            `❌ Network or unknown error uploading chunk ${chunkIndex + 1}:`,
+            err.message
+          );
+        }
         break;
       }
     }
