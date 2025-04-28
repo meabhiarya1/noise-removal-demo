@@ -189,6 +189,8 @@ const Upload = () => {
     }
   };
 
+  console.log(isProcessing, isUploading);
+
   return (
     <div className="flex flex-col justify-center items-center h-[calc(100vh-8rem)] mx-4 gap-6">
       {/* React Player */}
@@ -247,7 +249,7 @@ const Upload = () => {
             >
               <FiUploadCloud size={20} className="drop-shadow-md" />
             </button>
-            {fileID && originalFileName && (
+            {!isUploading && !isProcessing && fileID && originalFileName && (
               <button
                 onClick={handleFileDownload}
                 className="flex items-center justify-center cursor-pointer bg-gradient-to-r from-[#089168] to-[#417505] shadow-[0_0_24px_rgba(59,130,246,0.5)] border-2 border-[#64884f] rounded-full transition-all duration-300 px-5 py-2.5 text-white font-bold hover:shadow-[0_0_34px_rgba(59,130,246,0.6)] hover:border-[#bfdbfe]"
