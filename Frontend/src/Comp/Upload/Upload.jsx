@@ -14,6 +14,8 @@ const Upload = () => {
   const [processingProgress, setProcessingProgress] = useState(0); // for processing progress
   const [isUploading, setIsUploading] = useState(false); // Track whether uploading is in progress
   const [isProcessing, setIsProcessing] = useState(false); // Track whether processing is in progress
+  const [fileID, setFileID] = useState(null); // Track the file ID for download
+  const [originalFileName, setOriginalFileName] = useState(null); // Track the original file name for download
 
   const fileInputRef = useRef();
   const videoURL = file ? URL.createObjectURL(file) : null;
@@ -89,6 +91,13 @@ const Upload = () => {
           console.log("📦 Job ID received:", jobId);
         }
 
+        if (response.data?.outputFileName) {
+          setOriginalFileName(response.data.outputFileName);
+        }
+        if (response.data?.uploadId) {
+          setFileID(response.data.uploadId);
+        }
+
         const isSuccess =
           response.data?.success === true ||
           response.data?.message?.toLowerCase().includes("processing started");
@@ -139,12 +148,11 @@ const Upload = () => {
       console.warn("⚠️ No jobId returned. Progress tracking skipped.");
       setIsUploading(false); // End upload phase
     }
-
     console.log("🎉 Upload completed for:", file.name);
   };
 
   const handleChangeVideo = () => {
-    fileInputRef.current.click(); 
+    fileInputRef.current.click();
   };
 
   const handleFileChange = (e) => {
@@ -159,7 +167,7 @@ const Upload = () => {
   const handleFileDownload = async () => {
     try {
       const response = await axios.get(
-        `http://172.26.220.40:5000/download/${uploadId}/1dbbdec8-bdc5-495b-89a3-f1049c721b0e_sample1.mp4`,
+        `http://172.26.220.40:5000/download/${fileID}/${originalFileName}`,
         {
           responseType: "blob",
         }
@@ -168,7 +176,10 @@ const Upload = () => {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "1dbbdec8-bdc5-495b-89a3-f1049c721b0e_sample1.mp4"); // Specify the file name for download
+      link.setAttribute(
+        "download",
+        "1dbbdec8-bdc5-495b-89a3-f1049c721b0e_sample1.mp4"
+      ); // Specify the file name for download
       document.body.appendChild(link);
       link.click();
       link.remove();
