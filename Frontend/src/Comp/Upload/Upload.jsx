@@ -144,7 +144,7 @@ const Upload = () => {
   };
 
   const handleChangeVideo = () => {
-    fileInputRef.current.click(); // Trigger hidden input
+    fileInputRef.current.click(); 
   };
 
   const handleFileChange = (e) => {
@@ -154,6 +154,27 @@ const Upload = () => {
   const hanFileUpload = () => {
     if (!file) return;
     uploadFileInChunks(file);
+  };
+
+  const handleFileDownload = async () => {
+    try {
+      const response = await axios.get(
+        `http://172.26.220.40:5000/download/${uploadId}/1dbbdec8-bdc5-495b-89a3-f1049c721b0e_sample1.mp4`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "1dbbdec8-bdc5-495b-89a3-f1049c721b0e_sample1.mp4"); // Specify the file name for download
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("❌ Error downloading file:", err.message);
+    }
   };
 
   return (
@@ -210,6 +231,12 @@ const Upload = () => {
             </button>
             <button
               onClick={hanFileUpload}
+              className="flex items-center justify-center cursor-pointer bg-gradient-to-r from-[#3b82f6] to-[#60a5fa] shadow-[0_0_24px_rgba(59,130,246,0.5)] border-2 border-[#93c5fd] rounded-full transition-all duration-300 px-5 py-2.5 text-white font-bold hover:shadow-[0_0_34px_rgba(59,130,246,0.6)] hover:border-[#bfdbfe]"
+            >
+              <FiUploadCloud size={20} className="drop-shadow-md" />
+            </button>
+            <button
+              onClick={handleFileDownload}
               className="flex items-center justify-center cursor-pointer bg-gradient-to-r from-[#3b82f6] to-[#60a5fa] shadow-[0_0_24px_rgba(59,130,246,0.5)] border-2 border-[#93c5fd] rounded-full transition-all duration-300 px-5 py-2.5 text-white font-bold hover:shadow-[0_0_34px_rgba(59,130,246,0.6)] hover:border-[#bfdbfe]"
             >
               <FiUploadCloud size={20} className="drop-shadow-md" />

@@ -13,6 +13,7 @@ const jobRoutes = require("./routes/jobRoutes");
 const jobQueue = require("./queue/jobQueue");
 
 const authRoutes = require("./routes/authRoutes");
+const downloadRoutes = require("./routes/processRoutes");
 const cookieSession = require("cookie-session");
 
 const { createBullBoard } = require("@bull-board/api");
@@ -91,6 +92,7 @@ if (cluster.isPrimary) {
   app.use("/upload", uploadRoutes);
   app.use("/job", jobRoutes);
   app.use("/auth", authRoutes);
+  app.use("/download", downloadRoutes);
   app.get("/", (req, res) => {
     res.status(200).send("Server is running!");
   });
